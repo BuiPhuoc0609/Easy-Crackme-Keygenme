@@ -127,6 +127,44 @@ Tuy bị thiếu vài chữ `c` nhưng vẫn có thể đoán được.
 
 flag: `vcstraining{Aw3s0me_D4ta_tran5Form4t1oN_Kak4}`
 
+## F81E37E841D0B2C1D5738A7D60FD98BE
+
+<img width="1918" height="1017" alt="image" src="https://github.com/user-attachments/assets/b1815f9e-e33d-4177-a6d6-394c9417139c" />
+
+Tài này logic khá đơn giản, nhập vào key 5 bytes và dùng chính key đó xor với ciphertext để tạo thành flag
+
+Ta chỉ cần xor 5 bytes đầu của bản mã với `flag{` để lấy key stream là được.
+
+<img width="1917" height="876" alt="image" src="https://github.com/user-attachments/assets/b25afbf2-1d5a-4e7d-a174-62ad317a4d94" />
+
+flag: `flag{easy_baby_challenge}`
+
+## BasicDotnet
+
+Ta thấy đây là 1 bài keygenme C#:
+
+<img width="1388" height="700" alt="image" src="https://github.com/user-attachments/assets/9c242634-ccc7-41af-a900-ae83cc2c3af6" />
+
+<img width="502" height="188" alt="image" src="https://github.com/user-attachments/assets/969f2064-a78b-4da1-97b6-cbfbb3557305" />
+
+
+Mở dnspy:
+
+<img width="860" height="431" alt="image" src="https://github.com/user-attachments/assets/66a31a8e-29d6-4c40-9487-99d93641106a" />
+
+<img width="1247" height="853" alt="image" src="https://github.com/user-attachments/assets/76148890-4c30-4ff7-a8b2-068aa0268b35" />
+
+Ta thấy đây là 1 bài ctf đơn giản yêu cầu nhập name và key, chương trình sẽ mã hóa name bằng thuật toán rc4 với key_rc4 là `c-sharp`. Chương trình sẽ kiểm tra xem key có khớp với ciphertext hay không.
+
+Thử mã hóa name với key bất kỳ: https://gchq.github.io/CyberChef/#recipe=RC4(%7B'option':'UTF8','string':'c-sharp'%7D,'Latin1','Hex')&input=bG1hbw
+
+<img width="670" height="297" alt="image" src="https://github.com/user-attachments/assets/d69d1e7c-1a78-4a3b-9815-f8e47451505e" />
+
+Chương trình đã báo chính xác, tuy nhiên thứ ta cần là flag, vậy ta sẽ phải decrypt key `a0-d3-57-17-e2-17-98-82-ae-42-0b-df-2a-80-ec-d0-1b-f2-2e-62-67-96-f3-ba`:
+
+<img width="1918" height="887" alt="image" src="https://github.com/user-attachments/assets/94049ac5-c237-46a0-ac79-f7154e06dd46" />
+
+flag: `trainingctf{b4s1c_C++++}`
 
 
 

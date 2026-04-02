@@ -60,3 +60,5 @@ sub_FC11D0()
 for i in password:
     if i!=0:
         print(i,end='')
+
+#ThiS 1s A rIdiCuLously l0ng_Lon9_l0ng_loNg_lOng strIng. The most difficult thing is the decision to act, the rest is merely tenacity. The fears are paper tigers. You an do anything you decide to do. You an act to change and control your life; and the procedure, the process is its own reward.

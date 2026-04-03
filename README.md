@@ -296,7 +296,67 @@ https://gchq.github.io/CyberChef/#recipe=Swap_endianness('Raw',8,true)From_Binar
 
 <img width="1917" height="887" alt="image" src="https://github.com/user-attachments/assets/46a02a4e-e5b1-449e-bc9c-c9b80c393345" />
 
+
 flag: `flag{dont_forget_the_treasure}`
+
+## ImposterDotNet
+
+Bài cho ta 1 file pe C# bị obfuscate:
+
+<img width="840" height="669" alt="image" src="https://github.com/user-attachments/assets/ef360d4d-131e-4add-80fe-924787edc51d" />
+
+Yêu cầu ta nhập imposter đúng:
+
+<img width="387" height="327" alt="image" src="https://github.com/user-attachments/assets/9cad34c1-d469-4b28-9689-a0301b3cc1cf" />
+
+Ta chú ý event `button1_Click`:
+
+<img width="1918" height="928" alt="image" src="https://github.com/user-attachments/assets/a89ed188-51ce-4a8a-946a-863836fb71ff" />
+
+Các hàm như `CreateHash`, `Encode` bị wrapper bởi vô số hàm rác lồng nhau:
+
+<img width="1123" height="132" alt="image" src="https://github.com/user-attachments/assets/17c83303-6e44-4e36-b689-348774122775" />
+
+<img width="1092" height="116" alt="image" src="https://github.com/user-attachments/assets/414d0614-424c-4745-8014-06e65a77281f" />
+
+Ta sẽ mở `Analyzer` và trace theo `Uses` để xem đích cuối của hàm là gì:
+
+hàm `CreateHash`:
+
+<img width="1268" height="555" alt="image" src="https://github.com/user-attachments/assets/3ac2c70b-17d2-4417-a68a-79230b26f2be" />
+
+<img width="1241" height="339" alt="image" src="https://github.com/user-attachments/assets/84370cee-44bb-46b7-952d-20bd5602ca38" />
+
+hàm `Encode`:
+
+<img width="1272" height="229" alt="image" src="https://github.com/user-attachments/assets/19911f64-db09-4321-8658-a04d84d871d5" />
+
+<img width="1246" height="836" alt="image" src="https://github.com/user-attachments/assets/14c6de22-0773-4996-bab3-0a45071fb1ae" />
+
+Ta có thể dễ dàng thấy rằng hàm `CreateHash` thực hiện hash md5 input và hàm `Encode` thực hiện mã hóa rc4 với key là `among-us`.
+
+Ta thực hiện decrypt rc4 trước:
+
+https://gchq.github.io/CyberChef/#recipe=From_Hex('Auto')To_Hex('Space',0)RC4(%7B'option':'UTF8','string':'among-us'%7D,'Hex','UTF8')&input=NDAtNzItYjEtMjUtOWUtZmYtODMtZjMtMDctYzQtZTgtZDYtOGEtYTYtMGMtZTAtZWYtOWYtYTYtM2YtZTItZmMtMGItODEtMmEtNDctZGQtOGItMWEtYTMtNGMtMzI&oeol=VT
+
+<img width="1919" height="875" alt="image" src="https://github.com/user-attachments/assets/6ec4519f-1859-4099-93d9-a99aceed52f0" />
+
+Ta đã lấy được hash md5, thử crack hash bằng `CrackStation`:
+
+<img width="1919" height="879" alt="image" src="https://github.com/user-attachments/assets/554493b5-acbb-4736-8a97-bd5ced51c313" />
+
+Ta lấy được imposter là `.NET`:
+
+<img width="389" height="441" alt="image" src="https://github.com/user-attachments/assets/f08b5560-0bc8-465c-8315-505fb185be02" />
+
+flag: `trainingctf{.NET_is_imposter!}`
+
+
+
+
+
+
+
 
 
 

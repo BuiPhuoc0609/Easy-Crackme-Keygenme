@@ -351,8 +351,440 @@ Ta lấy được imposter là `.NET`:
 
 flag: `trainingctf{.NET_is_imposter!}`
 
+## vm_crackme
+
+Bài yêu cầu nhập password vào ô và kiểm tra:
+
+<img width="299" height="145" alt="image" src="https://github.com/user-attachments/assets/4606d0b9-7c17-41a6-a23d-1e5dedaa6249" />
+
+<img width="133" height="151" alt="image" src="https://github.com/user-attachments/assets/4b13c072-6afb-439e-bc2c-b85a2356cbeb" />
+
+<img width="1072" height="662" alt="image" src="https://github.com/user-attachments/assets/cce047fc-22af-41d6-bd9a-a09966b0f9fc" />
+
+<img width="1533" height="657" alt="image" src="https://github.com/user-attachments/assets/78f0756b-fb40-437c-813f-97638d3509b5" />
+
+Đây là 1 bài crackme VM, ta cần viết disassembler để hiểu luồng chương trình.
+
+vm_disassembler:
+
+```python
+import struct
+
+VM_BLOB = [0x0E, 0x0F, 0x10, 0x14, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x07, 0x0C, 0x00, 0x00, 0x00, 0x08, 0x0D, 0x07, 0x03, 0x00, 0x00, 0x00, 0x16, 0x0A, 0x0A, 0x11, 0x1A, 0x0D, 0x07, 0x86, 0x00, 0x00, 0x00, 0x08, 0x19, 0x07, 0xFE, 0xCA, 0xBE, 0xBA, 0x08, 0x00, 0x06, 0x07, 0x37, 0x13, 0x37, 0x13, 0x08, 0x01, 0x07, 0x37, 0x13, 0x37, 0x13, 0x08, 0x02, 0x07, 0x87, 0xED, 0x48, 0x26, 0x08, 0x11, 0x1A, 0x0A, 0x03, 0x0D, 0x09, 0x07, 0x04, 0x00, 0x00, 0x00, 0x08, 0x00, 0x0C, 0x19, 0x07, 0xEF, 0xBE, 0xAD, 0xDE, 0x08, 0x01, 0x07, 0x59, 0xE6, 0xC3, 0x94, 0x08, 0x11, 0x1A, 0x0A, 0x03, 0x0D, 0x09, 0x07, 0x04, 0x00, 0x00, 0x00, 0x08, 0x00, 0x0C, 0x07, 0x04, 0x00, 0x00, 0x00, 0x08, 0x19, 0x06, 0x05, 0x07, 0xBA, 0xAB, 0xBA, 0xAB, 0x08, 0x02, 0x07, 0xEF, 0xCD, 0xAB, 0x89, 0x08, 0x00, 0x05, 0x07, 0x7F, 0xA5, 0x69, 0x54, 0x08, 0x11, 0x1A, 0x0A, 0x03, 0x0D, 0x07, 0x02, 0x00, 0x00, 0x00, 0x08, 0x0A, 0x11, 0x12, 0x01, 0x00, 0x00, 0x00, 0x18, 0x07, 0x08, 0x00, 0x00, 0x00, 0x08, 0x09, 0x01, 0x0D, 0x14, 0x23, 0x00, 0x00, 0x00, 0x54, 0x0F, 0x1B, 0xD0, 0xB7, 0x1D, 0x20, 0x92, 0xF0, 0xDF, 0x24, 0xC9, 0x78, 0xCB, 0x46, 0xAF, 0x94, 0x33, 0x32, 0xF5, 0x79, 0x91, 0xB1, 0xD2, 0x71, 0x05, 0x2A, 0xD9, 0x78, 0x71, 0x11, 0xBA, 0x96, 0xBC, 0xCA, 0x0C, 0x09, 0x09, 0x07, 0x23, 0x00, 0x00, 0x00, 0x08, 0x09, 0x07, 0x0C, 0x00, 0x00, 0x00, 0x08, 0x0A, 0x17, 0x0C, 0x07, 0x02, 0x00, 0x00, 0x00, 0x16, 0x18]
 
 
+def to_s32(value: int) -> int:
+    return struct.unpack("<i", struct.pack("<I", value & 0xFFFFFFFF))[0]
+
+
+def decode_instruction(blob: bytes, ip: int):
+    if ip < 0 or ip >= len(blob):
+        return None
+
+    opcode = blob[ip]
+    imm = None
+    size = 1
+    target = None
+
+    if opcode == 0:
+        text = f"{ip:04x}: add stack[1], stack[0]"
+    elif opcode == 1:
+        text = f"{ip:04x}: sub stack[1], stack[0]"
+    elif opcode == 2:
+        text = f"{ip:04x}: xor stack[1], stack[0]"
+    elif opcode == 3:
+        text = f"{ip:04x}: and stack[1], stack[0]"
+    elif opcode == 4:
+        text = f"{ip:04x}: or stack[1], stack[0]"
+    elif opcode == 5:
+        text = f"{ip:04x}: not stack[0]"
+    elif opcode == 6:
+        text = f"{ip:04x}: rol_or_ror stack[0], stack[1].low4"
+    elif opcode == 7:
+        if ip + 5 > len(blob):
+            return None
+        imm = struct.unpack_from("<I", blob, ip + 1)[0]
+        size = 5
+        text = f"{ip:04x}: mov reg1, {imm:#x}"
+    elif opcode == 8:
+        text = f"{ip:04x}: push reg1"
+    elif opcode == 9:
+        text = f"{ip:04x}: push reg2"
+    elif opcode == 10:
+        text = f"{ip:04x}: push reg3"
+    elif opcode == 11:
+        text = f"{ip:04x}: pop reg1"
+    elif opcode == 12:
+        text = f"{ip:04x}: pop reg2"
+    elif opcode == 13:
+        text = f"{ip:04x}: pop reg3"
+    elif opcode == 14:
+        text = f"{ip:04x}: mov reg1, reg0"
+    elif opcode == 15:
+        text = f"{ip:04x}: mov reg2, reg0"
+    elif opcode == 16:
+        text = f"{ip:04x}: mov reg3, reg0"
+    elif opcode == 17:
+        text = f"{ip:04x}: cmp stack[0], stack[1]"
+    elif opcode == 18:
+        if ip + 5 > len(blob):
+            return None
+        imm = struct.unpack_from("<I", blob, ip + 1)[0]
+        size = 5
+        target = (ip + 5 + to_s32(imm)) & 0xFFFFFFFF
+        text = f"{ip:04x}: jz {to_s32(imm):+#x} -> {target:#x}"
+    elif opcode == 19:
+        if ip + 5 > len(blob):
+            return None
+        imm = struct.unpack_from("<I", blob, ip + 1)[0]
+        size = 5
+        target = (ip + 5 + to_s32(imm)) & 0xFFFFFFFF
+        text = f"{ip:04x}: jnz {to_s32(imm):+#x} -> {target:#x}"
+    elif opcode == 20:
+        if ip + 5 > len(blob):
+            return None
+        imm = struct.unpack_from("<I", blob, ip + 1)[0]
+        size = 5
+        target = (ip + 5 + to_s32(imm)) & 0xFFFFFFFF
+        text = f"{ip:04x}: call {to_s32(imm):+#x} -> {target:#x}"
+    elif opcode == 21:
+        text = f"{ip:04x}: ret"
+    elif opcode == 22:
+        text = f"{ip:04x}: io reg1"
+    elif opcode == 23:
+        text = f"{ip:04x}: rc4"
+    elif opcode == 24:
+        text = f"{ip:04x}: set flags |= 1"
+    elif opcode == 25:
+        text = f"{ip:04x}: push decode32(mem_base + reg2)"
+    elif opcode == 26:
+        text = f"{ip:04x}: push flags"
+    else:
+        return None
+
+    return {
+        "ip": ip,
+        "opcode": opcode,
+        "imm": imm,
+        "size": size,
+        "target": target,
+        "text": text,
+    }
+
+
+def walk_cfg(blob: bytes, entry_ip: int = 0):
+    queue = [entry_ip]
+    visited_ips = set()
+    decoded_by_ip = {}
+
+    while queue:
+        start_ip = queue.pop(0)
+        ip = start_ip
+
+        while 0 <= ip < len(blob):
+            if ip in visited_ips:
+                break
+
+            ins = decode_instruction(blob, ip)
+            if ins is None:
+                break
+
+            visited_ips.add(ip)
+            decoded_by_ip[ip] = ins
+            next_ip = ip + ins["size"]
+            opcode = ins["opcode"]
+
+            if opcode == 21:
+                break
+
+            if opcode in {18, 19}:
+                if ins["target"] is not None and 0 <= ins["target"] < len(blob):
+                    if ins["target"] not in visited_ips and ins["target"] not in queue:
+                        queue.append(ins["target"])
+                if next_ip < len(blob):
+                    ip = next_ip
+                    continue
+                break
+
+            if opcode == 20:
+                if ins["target"] is not None and 0 <= ins["target"] < len(blob):
+                    if ins["target"] not in visited_ips and ins["target"] not in queue:
+                        queue.append(ins["target"])
+                if next_ip < len(blob):
+                    ip = next_ip
+                    continue
+                break
+
+            if next_ip >= len(blob):
+                break
+
+            ip = next_ip
+
+    return [decoded_by_ip[ip] for ip in sorted(decoded_by_ip)]
+
+
+def main():
+    blob = bytes(VM_BLOB)
+    decoded = {item["ip"]: item for item in walk_cfg(blob)}
+
+    ip = 0
+    while ip < len(blob):
+        item = decoded.get(ip)
+        if item is not None:
+            print(item["text"])
+            ip += item["size"]
+        else:
+            print(f"{ip:04x}: db {blob[ip]:02x}")
+            ip += 1
+
+
+if __name__ == "__main__":
+    main()
+```
+
+```
+0000: mov reg1, reg0
+0001: mov reg2, reg0
+0002: mov reg3, reg0
+0003: call +0xc -> 0x14
+0008: add stack[1], stack[0]
+0009: add stack[1], stack[0]
+000a: add stack[1], stack[0]
+000b: add stack[1], stack[0]
+000c: add stack[1], stack[0]
+000d: add stack[1], stack[0]
+000e: add stack[1], stack[0]
+000f: add stack[1], stack[0]
+0010: add stack[1], stack[0]
+0011: add stack[1], stack[0]
+0012: add stack[1], stack[0]
+0013: add stack[1], stack[0]
+0014: pop reg2
+0015: mov reg1, 0xc
+001a: push reg1
+001b: pop reg3
+001c: mov reg1, 0x3
+0021: io reg1
+0022: push reg3
+0023: push reg3
+0024: cmp stack[0], stack[1]
+0025: push flags
+0026: pop reg3
+0027: mov reg1, 0x86
+002c: push reg1
+002d: push decode32(mem_base + reg2)
+002e: mov reg1, 0xbabecafe
+0033: push reg1
+0034: add stack[1], stack[0]
+0035: rol_or_ror stack[0], stack[1].low4
+0036: mov reg1, 0x13371337
+003b: push reg1
+003c: sub stack[1], stack[0]
+003d: mov reg1, 0x13371337
+0042: push reg1
+0043: xor stack[1], stack[0]
+0044: mov reg1, 0x2648ed87
+0049: push reg1
+004a: cmp stack[0], stack[1]
+004b: push flags
+004c: push reg3
+004d: and stack[1], stack[0]
+004e: pop reg3
+004f: push reg2
+0050: mov reg1, 0x4
+0055: push reg1
+0056: add stack[1], stack[0]
+0057: pop reg2
+0058: push decode32(mem_base + reg2)
+0059: mov reg1, 0xdeadbeef
+005e: push reg1
+005f: sub stack[1], stack[0]
+0060: mov reg1, 0x94c3e659
+0065: push reg1
+0066: cmp stack[0], stack[1]
+0067: push flags
+0068: push reg3
+0069: and stack[1], stack[0]
+006a: pop reg3
+006b: push reg2
+006c: mov reg1, 0x4
+0071: push reg1
+0072: add stack[1], stack[0]
+0073: pop reg2
+0074: mov reg1, 0x4
+0079: push reg1
+007a: push decode32(mem_base + reg2)
+007b: rol_or_ror stack[0], stack[1].low4
+007c: not stack[0]
+007d: mov reg1, 0xabbaabba
+0082: push reg1
+0083: xor stack[1], stack[0]
+0084: mov reg1, 0x89abcdef
+0089: push reg1
+008a: add stack[1], stack[0]
+008b: not stack[0]
+008c: mov reg1, 0x5469a57f
+0091: push reg1
+0092: cmp stack[0], stack[1]
+0093: push flags
+0094: push reg3
+0095: and stack[1], stack[0]
+0096: pop reg3
+0097: mov reg1, 0x2
+009c: push reg1
+009d: push reg3
+009e: cmp stack[0], stack[1]
+009f: jz +0x1 -> 0xa5
+00a4: set flags |= 1
+00a5: mov reg1, 0x8
+00aa: push reg1
+00ab: push reg2
+00ac: sub stack[1], stack[0]
+00ad: pop reg3
+00ae: call +0x23 -> 0xd6
+00b3: db 54
+00b4: db 0f
+00b5: db 1b
+00b6: db d0
+00b7: db b7
+00b8: db 1d
+00b9: db 20
+00ba: db 92
+00bb: db f0
+00bc: db df
+00bd: db 24
+00be: db c9
+00bf: db 78
+00c0: db cb
+00c1: db 46
+00c2: db af
+00c3: db 94
+00c4: db 33
+00c5: db 32
+00c6: db f5
+00c7: db 79
+00c8: db 91
+00c9: db b1
+00ca: db d2
+00cb: db 71
+00cc: db 05
+00cd: db 2a
+00ce: db d9
+00cf: db 78
+00d0: db 71
+00d1: db 11
+00d2: db ba
+00d3: db 96
+00d4: db bc
+00d5: db ca
+00d6: pop reg2
+00d7: push reg2
+00d8: push reg2
+00d9: mov reg1, 0x23
+00de: push reg1
+00df: push reg2
+00e0: mov reg1, 0xc
+00e5: push reg1
+00e6: push reg3
+00e7: rc4
+00e8: pop reg2
+00e9: mov reg1, 0x2
+00ee: io reg1
+00ef: set flags |= 1
+```
+
+script giải:
+
+```python
+import struct
+
+import z3
+
+CIPHERTEXT = bytes([
+    0x54, 0x0F, 0x1B, 0xD0, 0xB7, 0x1D, 0x20, 0x92,
+    0xF0, 0xDF, 0x24, 0xC9, 0x78, 0xCB, 0x46, 0xAF,
+    0x94, 0x33, 0x32, 0xF5, 0x79, 0x91, 0xB1, 0xD2,
+    0x71, 0x05, 0x2A, 0xD9, 0x78, 0x71, 0x11, 0xBA,
+    0x96, 0xBC, 0xCA,
+])
+
+
+def rc4(key, data):
+    s = list(range(256))
+    j = 0
+    for i in range(256):
+        j = (j + s[i] + key[i % len(key)]) & 0xFF
+        s[i], s[j] = s[j], s[i]
+
+    i = 0
+    j = 0
+    out = bytearray()
+    for b in data:
+        i = (i + 1) & 0xFF
+        j = (j + s[i]) & 0xFF
+        s[i], s[j] = s[j], s[i]
+        out.append(b ^ s[(s[i] + s[j]) & 0xFF])
+    return bytes(out)
+
+
+def decode32_expr(b0, b1, b2, b3):
+    p0 = z3.ZeroExt(24, b0 + z3.BitVecVal(0x12, 8))
+    p1 = z3.ZeroExt(24, b1 - z3.BitVecVal(0x78, 8))
+    p2 = z3.ZeroExt(24, z3.RotateLeft(b2, 2))
+    p3 = z3.ZeroExt(24, z3.RotateRight(b3, 4))
+    return (p0 << 24) | (p1 << 16) | (p2 << 8) | p3
+
+
+def solve_key():
+    key_bytes = [z3.BitVec(f'k{i}', 8) for i in range(12)]
+    solver = z3.Solver()
+
+    for b in key_bytes:
+        solver.add(z3.UGE(b, 0x20), z3.ULE(b, 0x7E))
+
+    x0 = decode32_expr(*key_bytes[0:4])
+    x1 = decode32_expr(*key_bytes[4:8])
+    x2 = decode32_expr(*key_bytes[8:12])
+
+    solver.add(
+        ((z3.BitVecVal(0x13371337, 32) - z3.RotateLeft(x0 + z3.BitVecVal(0xBABECAFE, 32), 6))
+         ^ z3.BitVecVal(0x13371337, 32))
+        == z3.BitVecVal(0x2648ED87, 32)
+    )
+    solver.add(
+        (z3.BitVecVal(0xDEADBEEF, 32) - x1)
+        == z3.BitVecVal(0x94C3E659, 32)
+    )
+    solver.add(
+        ~(((~z3.RotateRight(x2, 4)) ^ z3.BitVecVal(0xABBAABBA, 32))
+          + z3.BitVecVal(0x89ABCDEF, 32))
+        == z3.BitVecVal(0x5469A57F, 32)
+    )
+
+    if solver.check() != z3.sat:
+        raise RuntimeError('không giải được key')
+
+    model = solver.model()
+    return bytes(model[b].as_long() for b in key_bytes)
+
+
+def main():
+    key = solve_key()
+    plaintext = rc4(key, CIPHERTEXT).rstrip(b'\x00')
+
+    print(f'key  = {key.decode()}')
+    print(f'flag = {plaintext.decode()}')
+
+
+if __name__ == '__main__':
+    main()
+#key  = R0DE7a6iHuct
+#flag = flag{S1mpl3_ST4ck_V1rTu4L_M4ch1n3}
+```
+
+<img width="688" height="473" alt="image" src="https://github.com/user-attachments/assets/4fc944c1-3b55-45c7-937b-24de4ef30ba3" />
+
+flag: `flag{S1mpl3_ST4ck_V1rTu4L_M4ch1n3}`
 
 
 
